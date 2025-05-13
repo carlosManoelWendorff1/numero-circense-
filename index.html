@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Numerais Cistercienses: Reconhecer e Gerar</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+            background-color: #f4f4f4;
+            color: #333;
+            gap: 30px; /* Espaço entre as seções */
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%; /* Ajuste a largura */
+            max-width: 500px; /* Máximo para não ficar muito largo */
+        }
+        h1, h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        input[type="file"], input[type="number"] {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: calc(100% - 22px); /* Ajusta largura considerando padding e border */
+            box-sizing: border-box; /* Inclui padding e border no cálculo da largura */
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        #resultado_reconhecimento, #resultado_geracao {
+            margin-top: 30px;
+            font-size: 1.2em; /* Um pouco menor para ambos */
+            color: #27ae60;
+            min-height: 40px; /* Altura mínima para ambos */
+            padding: 10px;
+            border: 1px dashed #ddd;
+            border-radius: 4px;
+            background-color: #e8f6f3;
+            word-break: break-word; /* Evita overflow de texto */
+        }
+         #preview_reconhecimento, #imagem_gerada {
+            margin-top: 20px;
+            max-width: 100%; /* Garante que a imagem não exceda o container */
+            max-height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none; /* Oculta inicialmente */
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .loader {
+            border: 5px solid #f3f3f3; /* Light grey */
+            border-top: 5px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none; /* Oculto inicialmente */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .section-separator {
+            width: 100%;
+            height: 1px;
+            background-color: #ddd;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Numerais Cistercienses</h1>
+        <h2>Reconhecer Número a partir da Imagem</h2>
+        <input type="file" id="arquivoImagem" accept="image/*">
+        <img id="preview_reconhecimento" src="#" alt="Pré-visualização da imagem" />
+        <button id="btnEnviar" disabled>Enviar Imagem para Reconhecer</button>
+        <div class="loader" id="loader_reconhecimento"></div>
+        <div id="resultado_reconhecimento">
+            <p>O número reconhecido aparecerá aqui.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Gerar Imagem a partir do Número</h2>
+        <input type="number" id="inputNumeroGerar" placeholder="Digite um número (0-9999)" min="0" max="9999">
+        <button id="btnGerarImagem">Gerar Imagem</button>
+         <div class="loader" id="loader_geracao"></div>
+        <img id="imagem_gerada" src="#" alt="Imagem do numeral cisterciense gerado" />
+        <div id="resultado_geracao" style="color: initial;">
+             <p>A imagem gerada aparecerá acima.</p>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Elementos do Reconhecimento ---
+        const inputImagem = document.getElementById('arquivoImagem');
+        const btnEnviar = document.getElementById('btnEnviar');
+        const divResultadoReconhecimento = document.getElementById('resultado_reconhecimento');
+        const imgPreviewReconhecimento = document.getElementById('preview_reconhecimento');
+        const loaderReconhecimento = document.getElementById('loader_reconhecimento');
+        let arquivoSelecionado = null;
+
+        // --- Elementos da Geração ---
+        const inputNumeroGerar = document.getElementById('inputNumeroGerar');
+        const btnGerarImagem = document.getElementById('btnGerarImagem');
+        const imgImagemGerada = document.getElementById('imagem_gerada');
+        const divResultadoGeracao = document.getElementById('resultado_geracao');
+         const loaderGeracao = document.getElementById('loader_geracao');
+
+
+        // --- Event Listener para Seleção de Arquivo (Reconhecimento) ---
+        inputImagem.addEventListener('change', function(event) {
+            arquivoSelecionado = event.target.files[0];
+            if (arquivoSelecionado) {
+                btnEnviar.disabled = false;
+                divResultadoReconhecimento.innerHTML = '<p>O número reconhecido aparecerá aqui.</p>'; // Reseta o resultado
+                divResultadoReconhecimento.style.color = '#27ae60'; // Reseta a cor
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgPreviewReconhecimento.src = e.target.result;
+                    imgPreviewReconhecimento.style.display = 'block';
+                }
+                reader.readAsDataURL(arquivoSelecionado);
+
+            } else {
+                btnEnviar.disabled = true;
+                imgPreviewReconhecimento.style.display = 'none';
+                imgPreviewReconhecimento.src = '#';
+            }
+        });
+
+        // --- Event Listener para Envio de Imagem (Reconhecimento) ---
+        btnEnviar.addEventListener('click', async function() {
+            if (!arquivoSelecionado) {
+                divResultadoReconhecimento.innerHTML = '<p style="color: red;">Por favor, selecione uma imagem primeiro.</p>';
+                divResultadoReconhecimento.style.color = 'red';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('imagem', arquivoSelecionado);
+
+            divResultadoReconhecimento.innerHTML = '<p>Processando...</p>';
+            divResultadoReconhecimento.style.color = '#333'; // Cor neutra enquanto processa
+            loaderReconhecimento.style.display = 'block';
+            btnEnviar.disabled = true;
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/reconhecer', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                loaderReconhecimento.style.display = 'none';
+                btnEnviar.disabled = false;
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.numero !== undefined) {
+                        divResultadoReconhecimento.innerHTML = `<p>Número Reconhecido: <strong>${data.numero}</strong></p>`;
+                        divResultadoReconhecimento.style.color = '#27ae60'; // Verde sucesso
+                    } else if (data.erro) {
+                         divResultadoReconhecimento.innerHTML = `<p style="color: red;">Erro: ${data.erro}</p>`;
+                         divResultadoReconhecimento.style.color = 'red';
+                    } else {
+                        divResultadoReconhecimento.innerHTML = `<p style="color: red;">Resposta inesperada do servidor.</p>`;
+                         divResultadoReconhecimento.style.color = 'red';
+                    }
+                } else {
+                    let errorMessage = `Erro na requisição: ${response.status} ${response.statusText}`;
+                     divResultadoReconhecimento.style.color = 'red';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData && errorData.erro) {
+                            errorMessage = `Erro: ${errorData.erro}`;
+                        }
+                    } catch (e) {
+                        // Não foi possível parsear o JSON do erro, use a mensagem padrão
+                    }
+                    divResultadoReconhecimento.innerHTML = `<p style="color: red;">${errorMessage}</p>`;
+
+                }
+            } catch (error) {
+                loaderReconhecimento.style.display = 'none';
+                btnEnviar.disabled = false;
+                 divResultadoReconhecimento.style.color = 'red';
+                console.error('Erro ao enviar imagem:', error);
+                divResultadoReconhecimento.innerHTML = `<p style="color: red;">Falha ao conectar com o servidor (http://127.0.0.1:5000). Verifique se o backend Python está rodando e o CORS está habilitado. Veja o console para mais detalhes.</p>`;
+            }
+        });
+
+
+        // --- Event Listener para Gerar Imagem ---
+        btnGerarImagem.addEventListener('click', async function() {
+            const numero = parseInt(inputNumeroGerar.value, 10);
+
+            if (isNaN(numero) || numero < 0 || numero > 9999) {
+                divResultadoGeracao.innerHTML = '<p style="color: red;">Por favor, insira um número válido entre 0 e 9999.</p>';
+                 divResultadoGeracao.style.color = 'red';
+                imgImagemGerada.style.display = 'none';
+                imgImagemGerada.src = '#'; // Limpa a imagem anterior
+                return;
+            }
+
+            divResultadoGeracao.innerHTML = '<p>Gerando imagem...</p>';
+             divResultadoGeracao.style.color = '#333'; // Cor neutra enquanto processa
+            loaderGeracao.style.display = 'block';
+            btnGerarImagem.disabled = true;
+            imgImagemGerada.style.display = 'none'; // Oculta a imagem anterior enquanto gera a nova
+
+            try {
+                // Use a URL completa do seu backend Flask para a rota de geração
+                const response = await fetch(`http://127.0.0.1:5000/gerar_cisterciense/${numero}`, {
+                    method: 'GET' // A rota de geração é GET
+                });
+
+                loaderGeracao.style.display = 'none';
+                btnGerarImagem.disabled = false;
+
+                if (response.ok) {
+                    // A resposta é a imagem diretamente
+                    const blob = await response.blob(); // Obtenha a resposta como Blob
+                    const imageUrl = URL.createObjectURL(blob); // Crie uma URL temporária para o Blob
+
+                    imgImagemGerada.src = imageUrl;
+                    imgImagemGerada.style.display = 'block';
+                    divResultadoGeracao.innerHTML = `<p>Imagem gerada para o número ${numero}.</p>`;
+                     divResultadoGeracao.style.color = '#27ae60'; // Verde sucesso
+
+                    // Opcional: Limpar a URL temporária quando a imagem for carregada
+                    imgImagemGerada.onload = () => URL.revokeObjectURL(imageUrl);
+
+                } else {
+                     divResultadoGeracao.style.color = 'red';
+                    let errorMessage = `Erro na requisição: ${response.status} ${response.statusText}`;
+                     try {
+                        const errorData = await response.json(); // Tenta ler JSON mesmo em erro
+                        if (errorData && errorData.erro) {
+                            errorMessage = `Erro: ${errorData.erro}`;
+                        }
+                    } catch (e) {
+                        // Não foi possível parsear o JSON do erro
+                    }
+                    divResultadoGeracao.innerHTML = `<p style="color: red;">${errorMessage}</p>`;
+                    imgImagemGerada.style.display = 'none'; // Garante que a imagem não seja exibida em caso de erro
+
+                }
+            } catch (error) {
+                loaderGeracao.style.display = 'none';
+                btnGerarImagem.disabled = false;
+                 divResultadoGeracao.style.color = 'red';
+                console.error('Erro ao gerar imagem:', error);
+                 divResultadoGeracao.innerHTML = `<p style="color: red;">Falha ao conectar com o servidor (http://127.0.0.1:5000). Verifique se o backend Python está rodando. Veja o console para mais detalhes.</p>`;
+                 imgImagemGerada.style.display = 'none'; // Garante que a imagem não seja exibida em caso de erro
+            }
+        });
+
+         // --- Habilita o botão de geração se houver um número no input ---
+         inputNumeroGerar.addEventListener('input', function() {
+             const numero = parseInt(inputNumeroGerar.value, 10);
+              btnGerarImagem.disabled = isNaN(numero) || numero < 0 || numero > 9999;
+         });
+
+
+    </script>
+</body>
+</html>
